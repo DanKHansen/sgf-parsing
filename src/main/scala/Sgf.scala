@@ -13,9 +13,5 @@ object Sgf extends RegexParsers {
   // Keys may have multiple values associated with them.
   type SgfNode = Map[String, List[String]]
 
-  def parseSgf(text: String): Option[SgfTree] =
-     text match {
-        case "(;)" => Some(Node(Map.empty,Nil))
-        case _ => None
-     }
+  def parseSgf(text: String): Option[SgfTree] = ???
 }
