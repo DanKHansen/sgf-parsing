@@ -1,5 +1,33 @@
 import scala.util.parsing.combinator.*
 
+/*
+  "..." : terminal symbols
+  [...] : option: occurs at most once
+  {...} : repetition: any number of times, including zero
+  (...) : grouping
+    |   : exclusive or
+ italics: parameter explained at some other place
+
+  Collection = GameTree { GameTree }
+  GameTree   = "(" Sequence { GameTree } ")"
+  Sequence   = Node { Node }
+  Node       = ";" { Property }
+  Property   = PropIdent PropValue { PropValue }
+  PropIdent  = UcLetter { UcLetter }
+  PropValue  = "[" CValueType "]"
+  CValueType = (ValueType | Compose)
+  ValueType  = (Text)
+
+  Text: is a formatted text.
+   Newlines are removed if they come immediately after a \, otherwise they remain as newlines.
+   All whitespace characters other than newline are converted to spaces.
+   \ is the escape character.
+   Any non-whitespace character after \ is inserted as-is.
+   Any whitespace character after \ follows the above rules.
+   Note that SGF does not have escape sequences for whitespace characters such as \t or \n.
+
+ */
+
 object Sgf extends RegexParsers:
 
    private type Tree[A] = Node[A] // to separate the type from the constructor, cf. Haskell's Data.Tree
@@ -13,14 +41,6 @@ object Sgf extends RegexParsers:
    // Keys may have multiple values associated with them.
    private type SgfNode = Map[String, List[String]]
 
-   private def gameTree: Parser[SgfTree] = ???
 
 
-   def parseSgf(text: String): Option[SgfTree] = {
-      parseAll(gameTree, text) match
-         case Success(result, _) => Some(result)
-         case Failure(msg, next) =>
-            println(s"Parsing failed: $msg at line ${next.pos.line}, column ${next.pos.column}"); None
-         case Error(msg, next)   =>
-            println(s"Parsing Error: $msg at line ${next.pos.line}, column ${next.pos.column}"); None
-   }
+   def parseSgf(text: String): Option[SgfTree] = None
