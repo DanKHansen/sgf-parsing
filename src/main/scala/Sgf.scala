@@ -1,33 +1,4 @@
 import scala.util.parsing.combinator.*
-
-/*
-  "..." : terminal symbols
-  [...] : option: occurs at most once
-  {...} : repetition: any number of times, including zero
-  (...) : grouping
-    |   : exclusive or
- italics: parameter explained at some other place
-
-  Collection = GameTree { GameTree }
-  GameTree   = "(" Sequence { GameTree } ")"
-  Sequence   = Node { Node }
-  Node       = ";" { Property }
-  Property   = PropIdent PropValue { PropValue }
-  PropIdent  = UcLetter { UcLetter }
-  PropValue  = "[" CValueType "]"
-  CValueType = (ValueType | Compose)
-  ValueType  = (Text)
-
-  Text: is a formatted text.
-   Newlines are removed if they come immediately after a \, otherwise they remain as newlines.
-   All whitespace characters other than newline are converted to spaces.
-   \ is the escape character.
-   Any non-whitespace character after \ is inserted as-is.
-   Any whitespace character after \ follows the above rules.
-   Note that SGF does not have escape sequences for whitespace characters such as \t or \n.
-
- */
-
 object Sgf extends RegexParsers:
 
    private type Tree[A] = Node[A] // to separate the type from the constructor, cf. Haskell's Data.Tree
@@ -41,6 +12,22 @@ object Sgf extends RegexParsers:
    // Keys may have multiple values associated with them.
    private type SgfNode = Map[String, List[String]]
 
+   private def value: Parser[String] = """[^\$]""".r
+   private def propValue: Parser[String] = "[" ~> value <~ "]"
+   private def ucLetter: Parser[String] = "[A-Z]".r
+   private def propIdent: Parser[String] = ucLetter
+   private def property: Parser[(String, List[String])] = propIdent ~ rep(propValue) ^^ { case key ~ values =>
+      (key, values)
+   }
+   private def node: Parser[SgfNode] = ";" ~> rep(property) ^^ (_.toMap)
+   private def sequence: Parser[(SgfNode, List[SgfNode])] = node ~ rep(node) ^^ { case n ~ ns => (n, ns) }
+   private def gameTree: Parser[SgfTree] = "(" ~> (sequence ~ rep(gameTree)) <~ ")" ^^ {
+      case (rootNode, rootSubNodes) ~ subTrees =>
+         Node(rootNode, rootSubNodes.map(n => Node(n)) ++ subTrees)
+   }
 
-
-   def parseSgf(text: String): Option[SgfTree] = None
+   def parseSgf(sgfString: String): Option[SgfTree] =
+      println(s"Ordinary text: $sgfString\nParsed text: ${parseAll(gameTree, sgfString)}")
+      parse(gameTree, sgfString) match
+         case Success(result, _) => Some(result)
+         case _: NoSuccess       => None
