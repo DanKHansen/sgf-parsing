@@ -12,8 +12,8 @@ object Sgf extends RegexParsers:
    // Keys may have multiple values associated with them.
    private type SgfNode = Map[String, List[String]]
 
-   private def value: Parser[String] = """[^\$]""".r
-   private def propValue: Parser[String] = "[" ~> value <~ "]"
+   private def value: Parser[String] = "(?:\\\\\\]|[^\\]])*".r
+   private def propValue: Parser[String] = "[" ~> value <~ "]" ^^ { _.replace("\\]", "]") }
    private def ucLetter: Parser[String] = "[A-Z]".r
    private def propIdent: Parser[String] = ucLetter
    private def property: Parser[(String, List[String])] = propIdent ~ rep(propValue) ^^ { case key ~ values =>
@@ -26,7 +26,13 @@ object Sgf extends RegexParsers:
          Node(rootNode, rootSubNodes.map(n => Node(n)) ++ subTrees)
    }
 
-   def parseSgf(sgfString: String): Option[SgfTree] =
+   def parseSgf(sgfStringIn: String): Option[SgfTree] =
+      val sgfString = sgfStringIn
+         .replace("\\\\", "\\")
+         .replace("\t", " ")
+         .replace("\\\n", "")
+         .replace("\n", " ")
+
       println(s"Ordinary text: $sgfString\nParsed text: ${parseAll(gameTree, sgfString)}")
       parse(gameTree, sgfString) match
          case Success(result, _) => Some(result)
