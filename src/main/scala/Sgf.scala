@@ -12,28 +12,22 @@ object Sgf extends RegexParsers:
    // Keys may have multiple values associated with them.
    private type SgfNode = Map[String, List[String]]
 
-   private def value: Parser[String] = "(?:\\\\\\]|[^\\]])*".r
-   private def propValue: Parser[String] = "[" ~> value <~ "]" ^^ { _.replace("\\]", "]") }
-   private def ucLetter: Parser[String] = "[A-Z]".r
-   private def propIdent: Parser[String] = ucLetter
-   private def property: Parser[(String, List[String])] = propIdent ~ rep(propValue) ^^ { case key ~ values =>
-      (key, values)
-   }
-   private def node: Parser[SgfNode] = ";" ~> rep(property) ^^ (_.toMap)
-   private def sequence: Parser[(SgfNode, List[SgfNode])] = node ~ rep(node) ^^ { case n ~ ns => (n, ns) }
-   private def gameTree: Parser[SgfTree] = "(" ~> (sequence ~ rep(gameTree)) <~ ")" ^^ {
-      case (rootNode, rootSubNodes) ~ subTrees =>
-         Node(rootNode, rootSubNodes.map(n => Node(n)) ++ subTrees)
-   }
-
-   def parseSgf(sgfStringIn: String): Option[SgfTree] =
-      val sgfString = sgfStringIn
-         .replace("\\\\", "\\")
+   private def value: Parser[String] = "(?:\\\\\\]|[^\\]])*".r ^^ {
+      _.replace("\\\\", "\\")
          .replace("\t", " ")
          .replace("\\\n", "")
          .replace("\n", " ")
+         .replace("\\]", "]")
+   }
+   private def propVal: Parser[String] = "[" ~> value <~ "]"
+   private def ucLet: Parser[String] = "[A-Z]".r
+   private def propId: Parser[String] = ucLet
+   private def property: Parser[(String, List[String])] = propId ~ propVal.* ^^ { case k ~ vs => (k, vs) }
+   private def node: Parser[SgfNode] = ";" ~> property.* ^^ { _.toMap }
+   private def seq: Parser[(SgfNode, List[SgfNode])] = node ~ node.* ^^ { case n ~ ns => (n, ns) }
+   private def gT: Parser[SgfTree] = "(" ~> seq ~ gT.* <~ ")" ^^ { case s ~ g => Node(s._1, s._2.map(Node(_)) ++ g) }
 
-      println(s"Ordinary text: $sgfString\nParsed text: ${parseAll(gameTree, sgfString)}")
-      parse(gameTree, sgfString) match
+   def parseSgf(sgfString: String): Option[SgfTree] =
+      parse(gT, sgfString) match
          case Success(result, _) => Some(result)
          case _: NoSuccess       => None
