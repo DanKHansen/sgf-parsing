@@ -1,4 +1,5 @@
-import scala.util.parsing.combinator.*
+import scala.util.parsing.combinator.RegexParsers
+
 object Sgf extends RegexParsers:
 
    private type Tree[A] = Node[A] // to separate the type from the constructor, cf. Haskell's Data.Tree
@@ -13,15 +14,10 @@ object Sgf extends RegexParsers:
    private type SgfNode = Map[String, List[String]]
 
    private def value: Parser[String] = "(?:\\\\\\]|[^\\]])*".r ^^ {
-      _.replace("\\\\", "\\")
-         .replace("\t", " ")
-         .replace("\\\n", "")
-         .replace("\n", " ")
-         .replace("\\]", "]")
+      _.replace("\\\\", "\\").replace("\t", " ").replace("\\\n", "").replace("\n", " ").replace("\\]", "]")
    }
+   private def propId: Parser[String] = "[A-Z]".r
    private def propVal: Parser[String] = "[" ~> value <~ "]"
-   private def ucLet: Parser[String] = "[A-Z]".r
-   private def propId: Parser[String] = ucLet
    private def property: Parser[(String, List[String])] = propId ~ propVal.* ^^ { case k ~ vs => (k, vs) }
    private def node: Parser[SgfNode] = ";" ~> property.* ^^ { _.toMap }
    private def seq: Parser[(SgfNode, List[SgfNode])] = node ~ node.* ^^ { case n ~ ns => (n, ns) }
