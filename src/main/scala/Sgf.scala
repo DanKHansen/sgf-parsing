@@ -23,7 +23,7 @@ object Sgf extends RegexParsers:
    private def seq: Parser[(SgfNode, List[SgfNode])] = node ~ node.* ^^ { case n ~ ns => (n, ns) }
    private def gT: Parser[SgfTree] = "(" ~> seq ~ gT.* <~ ")" ^^ { case s ~ g => Node(s._1, s._2.map(Node(_)) ++ g) }
 
-   def parseSgf(sgfString: String): Option[SgfTree] =
-      parse(gT, sgfString) match
+   def parseSgf(s: String): Option[SgfTree] =
+      parse(gT, s) match
          case Success(result, _) => Some(result)
          case _: NoSuccess       => None
